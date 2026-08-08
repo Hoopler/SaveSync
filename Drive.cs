@@ -23,7 +23,7 @@ public static class DriveSync
                 scopes,
                 "user",
                 CancellationToken.None,
-                new FileDataStore("token_store", true));
+                new FileDataStore(Path.Combine(AppContext.BaseDirectory, "token_store"), true));
         }
 
         _service = new DriveService(new BaseClientService.Initializer
