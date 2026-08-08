@@ -1,0 +1,10 @@
+
+credentials.json
+token_store/
+
+bin/
+obj/
+
+.vs/
+.vscode/
+*.user
