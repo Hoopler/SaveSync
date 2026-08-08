@@ -15,7 +15,8 @@ public static class DriveSync
 
         string[] scopes = { DriveService.Scope.DriveFile };
         UserCredential credential;
-        await using (var stream = new FileStream("credentials.json", FileMode.Open, FileAccess.Read))
+        string credentialsPath = Path.Combine(AppContext.BaseDirectory, "credentials.json");
+        await using (var stream = new FileStream(credentialsPath, FileMode.Open, FileAccess.Read))
         {
             credential = await GoogleWebAuthorizationBroker.AuthorizeAsync(
                 (await GoogleClientSecrets.FromStreamAsync(stream)).Secrets,
