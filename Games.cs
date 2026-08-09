@@ -25,6 +25,8 @@ public class Game
     
     public static void AddGame(string name, string saveLocation)
     {
+        ReadGames();
+
         Game newgame = new Game(name, saveLocation);
         Games.Add(newgame);
         SaveGames();
@@ -32,6 +34,8 @@ public class Game
 
     public static void RemoveGame(string name)
     {
+        ReadGames();
+
         Game game = Games.Find(x => x.Name == name);
         if (game == null)
         {

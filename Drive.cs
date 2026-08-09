@@ -72,19 +72,34 @@ private static async Task UploadDirectoryRecursive(DriveService service, string 
 {
     foreach (string filePath in Directory.GetFiles(localDir))
     {
-        var fileMetadata = new File
-        {
-            Name = Path.GetFileName(filePath),
-            Parents = new[] { parentFolderId }
-        };
+        string fileName = Path.GetFileName(filePath);
+        string? existingFileId = await FindFileAsync(service, fileName, parentFolderId);
 
         await using var fileStream = new FileStream(filePath, FileMode.Open, FileAccess.Read);
-        var request = service.Files.Create(fileMetadata, fileStream, "application/octet-stream");
-        request.Fields = "id, name";
-        var progress = await request.UploadAsync();
 
-        if (progress.Status != Google.Apis.Upload.UploadStatus.Completed)
-            Console.WriteLine($"Failed to upload {fileMetadata.Name}: {progress.Exception?.Message}");
+        if (existingFileId != null)
+        {
+            var updateRequest = service.Files.Update(new File(), existingFileId, fileStream, "application/octet-stream");
+            var progress = await updateRequest.UploadAsync();
+
+            if (progress.Status != Google.Apis.Upload.UploadStatus.Completed)
+                Console.WriteLine($"Failed to update {fileName}: {progress.Exception?.Message}");
+        }
+        else
+        {
+            var fileMetadata = new File
+            {
+                Name = fileName,
+                Parents = new[] { parentFolderId }
+            };
+
+            var createRequest = service.Files.Create(fileMetadata, fileStream, "application/octet-stream");
+            createRequest.Fields = "id, name";
+            var progress = await createRequest.UploadAsync();
+
+            if (progress.Status != Google.Apis.Upload.UploadStatus.Completed)
+                Console.WriteLine($"Failed to upload {fileName}: {progress.Exception?.Message}");
+        }
 
         onFileDone();
     }
@@ -94,6 +109,17 @@ private static async Task UploadDirectoryRecursive(DriveService service, string 
         string subFolderId = await GetOrCreateFolderAsync(service, Path.GetFileName(subDir), parentFolderId);
         await UploadDirectoryRecursive(service, subDir, subFolderId, onFileDone);
     }
+}
+
+private static async Task<string?> FindFileAsync(DriveService service, string fileName, string parentId)
+{
+    var listRequest = service.Files.List();
+    listRequest.Q = $"name='{fileName}' and '{parentId}' in parents and trashed=false";
+    listRequest.Fields = "files(id, name)";
+    listRequest.Spaces = "drive";
+
+    var result = await listRequest.ExecuteAsync();
+    return result.Files.Count > 0 ? result.Files[0].Id : null;
 }
 
 public static async Task DownloadSave(string gameName)
